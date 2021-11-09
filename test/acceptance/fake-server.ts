@@ -14,6 +14,7 @@ type FakeServer = {
   setNextResponse: (r: any) => void;
   setNextStatusCode: (c: number) => void;
   setFeatureFlag: (featureFlag: string, enabled: boolean) => void;
+  getSnykToken: () => string;
   listen: (port: string | number, callback: () => void) => void;
   restore: () => void;
   close: (callback: () => void) => void;
@@ -65,6 +66,8 @@ export const fakeServer = (basePath: string, snykToken: string): FakeServer => {
   const setFeatureFlag = (featureFlag: string, enabled: boolean) => {
     featureFlags.set(featureFlag, enabled);
   };
+
+  const getSnykToken = (): string => snykToken;
 
   const app = express();
   app.use(bodyParser.json({ limit: '50mb' }));
@@ -442,6 +445,7 @@ export const fakeServer = (basePath: string, snykToken: string): FakeServer => {
     setNextResponse,
     setNextStatusCode,
     setFeatureFlag,
+    getSnykToken,
     listen,
     restore,
     close,

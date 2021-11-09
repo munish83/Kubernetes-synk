@@ -67,31 +67,6 @@ before('prime config', async (t) => {
   t.pass('endpoint removed');
 });
 
-test('auth via key', async (t) => {
-  try {
-    const res = await cli.auth(apiKey);
-    t.notEqual(res.toLowerCase().indexOf('ready'), -1, 'snyk auth worked');
-  } catch (e) {
-    t.threw(e);
-  }
-});
-
-test('auth via invalid key', async (t) => {
-  const errors = require('../../src/lib/errors/legacy-errors');
-
-  try {
-    const res = await cli.auth('_____________');
-    t.fail('auth should not succeed: ' + res);
-  } catch (e) {
-    const message = stripAnsi(errors.message(e));
-    t.equal(
-      message.toLowerCase().indexOf('authentication failed'),
-      0,
-      'captured failed auth',
-    );
-  }
-});
-
 test('auth with no args', async (t) => {
   // stub open so browser window doesn't actually open
   const open = sinon.stub();
