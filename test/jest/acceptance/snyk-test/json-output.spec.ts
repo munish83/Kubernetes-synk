@@ -1,11 +1,10 @@
 import { fakeServer } from '../../../acceptance/fake-server';
 import { createProjectFromWorkspace } from '../../util/createProject';
 import { runSnykCLI } from '../../util/runSnykCLI';
-import { removeAuth } from '../../util/removeAuth';
 
 jest.setTimeout(1000 * 60);
 
-describe('snyk test without authentication', () => {
+describe('snyk test --json', () => {
   let server: ReturnType<typeof fakeServer>;
   let env: Record<string, string>;
 
@@ -15,7 +14,7 @@ describe('snyk test without authentication', () => {
     env = {
       ...process.env,
       SNYK_API: 'http://localhost:' + apiPort + apiPath,
-      SNYK_TOKEN: '123456789',
+      SNYK_TOKEN: '123456789', // replace token from process.env
       SNYK_DISABLE_ANALYTICS: '1',
     };
 
@@ -31,17 +30,21 @@ describe('snyk test without authentication', () => {
     server.close(() => done());
   });
 
-  it('errors when auth token is not provided', async () => {
-    const project = await createProjectFromWorkspace('no-vulns');
-
-    const { code, stdout } = await runSnykCLI(`test`, {
+  it('includes path errors', async () => {
+    const project = await createProjectFromWorkspace(
+      'no-supported-target-files',
+    );
+    const { code, stdout } = await runSnykCLI(`test --json`, {
       cwd: project.path(),
-      env: removeAuth(env),
+      env: env,
     });
 
-    expect(code).toEqual(0);
-    expect(stdout).toMatch(
-      '`snyk` requires an authenticated account. Please run `snyk auth` and try again.',
-    );
+    expect(code).toEqual(3);
+    expect(JSON.parse(stdout)).toMatchObject({
+      path: project.path(),
+      error: expect.stringMatching(
+        `Could not detect supported target files in ${project.path()}.`,
+      ),
+    });
   });
 });

@@ -1,11 +1,10 @@
 import { fakeServer } from '../../../acceptance/fake-server';
 import { createProjectFromWorkspace } from '../../util/createProject';
 import { runSnykCLI } from '../../util/runSnykCLI';
-import { removeAuth } from '../../util/removeAuth';
 
 jest.setTimeout(1000 * 60);
 
-describe('snyk auth', () => {
+describe('snyk policy', () => {
   let server: ReturnType<typeof fakeServer>;
   let env: Record<string, string>;
 
@@ -31,29 +30,25 @@ describe('snyk auth', () => {
     server.close(() => done());
   });
 
-  it('accepts valid token', async () => {
-    const project = await createProjectFromWorkspace('fail-on/no-vulns');
-    server.setDepGraphResponse(await project.readJSON('vulns-result.json'));
-
-    const { code, stdout } = await runSnykCLI(`auth ${server.getSnykToken()}`, {
+  it('loads policy file', async () => {
+    const project = await createProjectFromWorkspace('policy');
+    const { code, stdout } = await runSnykCLI('policy', {
       cwd: project.path(),
-      env: removeAuth(env),
+      env: env,
     });
 
     expect(code).toEqual(0);
-    expect(stdout).toMatch('Your account has been authenticated.');
+    expect(stdout).toMatch('Current Snyk policy, read from .snyk file');
   });
 
-  it('rejects invalid token', async () => {
-    const project = await createProjectFromWorkspace('fail-on/no-vulns');
-    server.setDepGraphResponse(await project.readJSON('vulns-result.json'));
-
-    const { code, stdout } = await runSnykCLI(`auth invalid-token`, {
+  it('fails when policy not found', async () => {
+    const project = await createProjectFromWorkspace('empty');
+    const { code, stdout } = await runSnykCLI('policy', {
       cwd: project.path(),
-      env: removeAuth(env),
+      env: env,
     });
 
     expect(code).toEqual(2);
-    expect(stdout).toMatch('Authentication failed.');
+    expect(stdout).toMatch('Could not load policy.');
   });
 });

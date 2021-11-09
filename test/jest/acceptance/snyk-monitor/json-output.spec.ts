@@ -1,11 +1,10 @@
 import { fakeServer } from '../../../acceptance/fake-server';
 import { createProjectFromWorkspace } from '../../util/createProject';
 import { runSnykCLI } from '../../util/runSnykCLI';
-import { removeAuth } from '../../util/removeAuth';
 
 jest.setTimeout(1000 * 60);
 
-describe('snyk auth', () => {
+describe('snyk monitor --json', () => {
   let server: ReturnType<typeof fakeServer>;
   let env: Record<string, string>;
 
@@ -31,29 +30,35 @@ describe('snyk auth', () => {
     server.close(() => done());
   });
 
-  it('accepts valid token', async () => {
-    const project = await createProjectFromWorkspace('fail-on/no-vulns');
-    server.setDepGraphResponse(await project.readJSON('vulns-result.json'));
-
-    const { code, stdout } = await runSnykCLI(`auth ${server.getSnykToken()}`, {
+  it('includes result details', async () => {
+    const project = await createProjectFromWorkspace('no-vulns');
+    const { code, stdout } = await runSnykCLI(`monitor --json`, {
       cwd: project.path(),
-      env: removeAuth(env),
+      env: env,
     });
 
     expect(code).toEqual(0);
-    expect(stdout).toMatch('Your account has been authenticated.');
+    expect(JSON.parse(stdout)).toMatchObject({
+      packageManager: 'npm',
+      manageUrl: 'http://localhost:12345/manage',
+    });
   });
 
-  it('rejects invalid token', async () => {
-    const project = await createProjectFromWorkspace('fail-on/no-vulns');
-    server.setDepGraphResponse(await project.readJSON('vulns-result.json'));
-
-    const { code, stdout } = await runSnykCLI(`auth invalid-token`, {
+  it('includes path errors', async () => {
+    const project = await createProjectFromWorkspace(
+      'no-supported-target-files',
+    );
+    const { code, stdout } = await runSnykCLI(`monitor --json`, {
       cwd: project.path(),
-      env: removeAuth(env),
+      env: env,
     });
 
-    expect(code).toEqual(2);
-    expect(stdout).toMatch('Authentication failed.');
+    expect(code).toEqual(3);
+    expect(JSON.parse(stdout)).toMatchObject({
+      path: project.path(),
+      error: expect.stringMatching(
+        `Could not detect supported target files in ${project.path()}.`,
+      ),
+    });
   });
 });
