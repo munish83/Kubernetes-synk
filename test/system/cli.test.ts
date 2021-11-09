@@ -67,22 +67,6 @@ before('prime config', async (t) => {
   t.pass('endpoint removed');
 });
 
-test('test without authentication', async (t) => {
-  await cli.config('unset', 'api');
-  try {
-    await cli.test('semver@2');
-    t.fail('test should not pass if not authenticated');
-  } catch (error) {
-    t.deepEquals(error.strCode, 'NO_API_TOKEN', 'string code is as expected');
-    t.match(
-      error.message,
-      '`snyk` requires an authenticated account. Please run `snyk auth` and try again.',
-      'error message is shown as expected',
-    );
-  }
-  await cli.config('set', 'api=' + apiKey);
-});
-
 test('auth via key', async (t) => {
   try {
     const res = await cli.auth(apiKey);
